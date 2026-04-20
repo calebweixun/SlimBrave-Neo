@@ -17,6 +17,18 @@ SlimBrave Neo uses Chromium enterprise managed policies to disable telemetry,
 bloat, and unwanted features from Brave Browser. No browser extensions,
 no hacks, just clean policy enforcement that Brave respects natively.
 
+</div>
+
+> [!IMPORTANT]
+> **The only official source of SlimBrave Neo is this repository:**
+> [`github.com/ChaoticSi1ence/SlimBrave-Neo`](https://github.com/ChaoticSi1ence/SlimBrave-Neo)
+>
+> This project ships **source code only** — Python and PowerShell scripts you can read before running.
+> **There are no official `.exe`, `.msi`, `.dmg`, `.pkg`, installers, or compiled binaries.**
+> If you find a download claiming to be SlimBrave elsewhere, it is not from this project. See [`SECURITY.md`](SECURITY.md).
+
+<div align="center">
+
 ---
 
 <img src="assets/tui-screenshot.png" width="620" alt="SlimBrave Neo Linux TUI">
