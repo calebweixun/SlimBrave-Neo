@@ -25,7 +25,7 @@ no hacks, just clean policy enforcement that Brave respects natively.
 >
 > This project ships **source code only** — Python and PowerShell scripts you can read before running.
 > **There are no official `.exe`, `.msi`, `.dmg`, `.pkg`, installers, or compiled binaries.**
-> If you find a download claiming to be SlimBrave elsewhere, it is not from this project. See [`SECURITY.md`](SECURITY.md).
+> If you find a download claiming to be SlimBrave-Neo elsewhere, it is not from this project. See [`SECURITY.md`](SECURITY.md).
 
 <div align="center">
 
