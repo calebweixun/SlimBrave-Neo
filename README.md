@@ -278,8 +278,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 **Like this project? Give it a star!**
 
 Made with Python and PowerShell.
-
-[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=N9ZF2VGQJ9CXG)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 </div>
