@@ -161,6 +161,10 @@ def detect_brave():
 # Feature definitions - mirrors the Windows SlimBrave Neo PS1 categories
 # ---------------------------------------------------------------------------
 
+# Features with a `group` key are mutually exclusive within that group:
+# checking one silently unchecks the others. Used today for
+# IncognitoModeAvailability, where Disable (=1) and Force (=2) are
+# conflicting values for the same policy.
 CATEGORIES = [
     {
         "name": "Telemetry & Reporting",
@@ -168,7 +172,6 @@ CATEGORIES = [
             {"name": "Disable Metrics Reporting", "key": "MetricsReportingEnabled", "value": False},
             {"name": "Disable Safe Browsing Reporting", "key": "SafeBrowsingExtendedReportingEnabled", "value": False},
             {"name": "Disable URL Data Collection", "key": "UrlKeyedAnonymizedDataCollectionEnabled", "value": False},
-            {"name": "Disable Feedback Surveys", "key": "FeedbackSurveysEnabled", "value": False},
             {"name": "Disable P3A Analytics", "key": "BraveP3AEnabled", "value": False},
             {"name": "Disable Stats Ping", "key": "BraveStatsPingEnabled", "value": False},
         ],
@@ -183,12 +186,16 @@ CATEGORIES = [
             {"name": "Disable Browser Sign-in", "key": "BrowserSignin", "value": 0},
             {"name": "Enable Do Not Track", "key": "EnableDoNotTrack", "value": True},
             {"name": "Enable Global Privacy Control", "key": "BraveGlobalPrivacyControlEnabled", "value": True},
+            {"name": "Enable De-AMP", "key": "BraveDeAmpEnabled", "value": True},
+            {"name": "Enable Debouncing", "key": "BraveDebouncingEnabled", "value": True},
+            {"name": "Strip Tracking URL Parameters", "key": "BraveTrackingQueryParametersFilteringEnabled", "value": True},
+            {"name": "Reduce Language Fingerprinting", "key": "BraveReduceLanguageEnabled", "value": True},
             {"name": "Disable WebRTC IP Leak", "key": "WebRtcIPHandling", "value": "disable_non_proxied_udp"},
             {"name": "Disable QUIC Protocol", "key": "QuicAllowed", "value": False},
             {"name": "Block Third Party Cookies", "key": "BlockThirdPartyCookies", "value": True},
             {"name": "Force Google SafeSearch", "key": "ForceGoogleSafeSearch", "value": True},
-            {"name": "Disable Incognito Mode", "key": "IncognitoModeAvailability", "value": 1},
-            {"name": "Force Incognito Mode", "key": "IncognitoModeAvailability", "value": 2},
+            {"name": "Disable Incognito Mode", "key": "IncognitoModeAvailability", "value": 1, "group": "incognito"},
+            {"name": "Force Incognito Mode", "key": "IncognitoModeAvailability", "value": 2, "group": "incognito"},
         ],
     },
     {
@@ -206,18 +213,17 @@ CATEGORIES = [
             {"name": "Disable Speedreader", "key": "BraveSpeedreaderEnabled", "value": False},
             {"name": "Disable Tor", "key": "TorDisabled", "value": True},
             {"name": "Disable Sync", "key": "SyncDisabled", "value": True},
+            {"name": "Disable IPFS", "key": "IPFSEnabled", "value": False},
         ],
     },
     {
         "name": "Performance & Bloat",
         "features": [
             {"name": "Disable Background Mode", "key": "BackgroundModeEnabled", "value": False},
-            {"name": "Disable Media Recommendations", "key": "MediaRecommendationsEnabled", "value": False},
             {"name": "Disable Shopping List", "key": "ShoppingListEnabled", "value": False},
             {"name": "Always Open PDF Externally", "key": "AlwaysOpenPdfExternally", "value": True},
             {"name": "Disable Translate", "key": "TranslateEnabled", "value": False},
             {"name": "Disable Spellcheck", "key": "SpellcheckEnabled", "value": False},
-            {"name": "Disable Promotions", "key": "PromotionsEnabled", "value": False},
             {"name": "Disable Search Suggestions", "key": "SearchSuggestEnabled", "value": False},
             {"name": "Disable Printing", "key": "PrintingEnabled", "value": False},
             {"name": "Disable Default Browser Prompt", "key": "DefaultBrowserSettingEnabled", "value": False},
@@ -250,6 +256,7 @@ def build_rows():
                 "text": feat["name"],
                 "key": feat["key"],
                 "value": feat["value"],
+                "group": feat.get("group"),
                 "checked": False,
             })
     # DNS mode selector at the end
@@ -284,6 +291,21 @@ def get_dns_template(rows):
         if row["type"] == ROW_DNS_TEMPLATE:
             return row["value"]
     return ""
+
+
+def toggle_feature_row(rows, target):
+    """Flip `target`'s checked state. If it belongs to a group, uncheck the
+    other group members first so at most one is active (e.g. Disable vs
+    Force Incognito, which set conflicting values for the same policy)."""
+    new_state = not target["checked"]
+    target["checked"] = new_state
+    group = target.get("group")
+    if new_state and group:
+        for row in rows:
+            if row is target:
+                continue
+            if row.get("type") == ROW_FEATURE and row.get("group") == group:
+                row["checked"] = False
 
 # ---------------------------------------------------------------------------
 # BOM-aware JSON reader (handles PowerShell UTF-16 exports)
@@ -345,12 +367,17 @@ def apply_policy(rows):
         elif row["type"] == ROW_DNS_TEMPLATE:
             dns_template = row["value"].strip()
 
+    # Refuse to write a broken DNS config: selecting "custom" without a
+    # template URL would set DnsOverHttpsMode=secure with no server,
+    # breaking DNS resolution in Brave.
+    if dns_mode == "custom" and not dns_template:
+        return False, "Custom DNS requires a DoH template URL."
+
     if dns_mode:
         # "custom" maps to "secure" in the actual Chromium policy
         if dns_mode == "custom":
             policy["DnsOverHttpsMode"] = "secure"
-            if dns_template:
-                policy["DnsOverHttpsTemplates"] = dns_template
+            policy["DnsOverHttpsTemplates"] = dns_template
         else:
             policy["DnsOverHttpsMode"] = dns_mode
             if dns_mode == "secure" and dns_template:
@@ -417,13 +444,18 @@ def sync_rows_with_policy(rows, policy):
 
 
 def export_settings(rows, path):
-    """Export current TUI selections to a SlimBrave Neo JSON config file."""
-    features = []
+    """Export current TUI selections to a SlimBrave Neo JSON config file.
+
+    Writes the new key-value map format so multi-value policies (e.g.
+    IncognitoModeAvailability, which can be 1 for Disable or 2 for Force)
+    round-trip cleanly instead of collapsing to just a key name.
+    """
+    features = {}
     dns_mode = None
     dns_template = ""
     for row in rows:
         if row["type"] == ROW_FEATURE and row["checked"]:
-            features.append(row["key"])
+            features[row["key"]] = row["value"]
         elif row["type"] == ROW_DNS:
             dns_mode = row["options"][row["selected"]]
         elif row["type"] == ROW_DNS_TEMPLATE:
@@ -445,6 +477,22 @@ def export_settings(rows, path):
         return False, f"Export failed: {e}"
 
 
+def _parse_imported_features(features_obj):
+    """Normalize the Features field from a config file.
+
+    Accepts two formats:
+      - New: {"KeyName": value, ...} — authoritative, round-trips multi-value policies.
+      - Legacy: ["KeyName", ...] — pre-2026 exports; value is implicit.
+    Returns (mapping, is_legacy). `mapping` is {key: value_or_None}; for the
+    legacy format values are None, signalling "first matching row wins".
+    """
+    if isinstance(features_obj, dict):
+        return dict(features_obj), False
+    if isinstance(features_obj, list):
+        return {k: None for k in features_obj}, True
+    return {}, False
+
+
 def import_settings(rows, path):
     """Import a SlimBrave Neo JSON config and update TUI row states."""
     try:
@@ -456,18 +504,36 @@ def import_settings(rows, path):
     except OSError as e:
         return False, f"Read error: {e}"
 
-    feature_keys = set(config.get("Features", []))
+    features_map, is_legacy = _parse_imported_features(config.get("Features"))
     dns_mode = config.get("DnsMode", "")
     dns_template = config.get("DnsTemplates", "") or ""
 
+    # Legacy array format can't distinguish value-1 vs value-2 for keys
+    # with multiple rows (IncognitoModeAvailability). To avoid silently
+    # picking the later entry — which historically force-incognitoed users
+    # who imported the Parental Controls preset — only the first matching
+    # row per key is checked in legacy mode.
+    legacy_handled = set()
+
     for row in rows:
         if row["type"] == ROW_FEATURE:
-            row["checked"] = row["key"] in feature_keys
+            key = row["key"]
+            if key not in features_map:
+                row["checked"] = False
+                continue
+            expected = features_map[key]
+            if is_legacy:
+                if key in legacy_handled:
+                    row["checked"] = False
+                else:
+                    row["checked"] = True
+                    legacy_handled.add(key)
+            else:
+                row["checked"] = (expected == row["value"])
         elif row["type"] == ROW_DNS:
             if dns_mode and dns_mode in row["options"]:
                 row["selected"] = row["options"].index(dns_mode)
             elif dns_mode == "secure":
-                # Map "secure" to the secure option if present
                 if "secure" in row["options"]:
                     row["selected"] = row["options"].index("secure")
         elif row["type"] == ROW_DNS_TEMPLATE:
@@ -899,7 +965,7 @@ def main(stdscr):
         elif key == ord(" "):
             if focus == FOCUS_LIST:
                 if row["type"] == ROW_FEATURE:
-                    row["checked"] = not row["checked"]
+                    toggle_feature_row(rows, row)
                     status_msg = ""
                 elif row["type"] == ROW_DNS:
                     row["selected"] = (row["selected"] + 1) % len(row["options"])
@@ -965,7 +1031,7 @@ def main(stdscr):
             elif focus == FOCUS_LIST:
                 # Enter on a list item acts like spacebar
                 if row["type"] == ROW_FEATURE:
-                    row["checked"] = not row["checked"]
+                    toggle_feature_row(rows, row)
                     status_msg = ""
                 elif row["type"] == ROW_DNS:
                     row["selected"] = (row["selected"] + 1) % len(row["options"])

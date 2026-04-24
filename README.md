@@ -96,9 +96,9 @@ Requires Administrator privileges.
 ## Features
 
 ### Telemetry & Reporting
+- Disable Metrics Reporting
 - Disable Safe Browsing Reporting
 - Disable URL Data Collection
-- Disable Feedback Surveys
 - Disable P3A Analytics
 - Disable Stats Ping
 
@@ -107,12 +107,17 @@ Requires Administrator privileges.
 - Disable Autofill (Addresses & Credit Cards)
 - Disable Password Manager
 - Disable Browser Sign-in
+- Enable Do Not Track
 - Enable Global Privacy Control
+- Enable De-AMP (strip Google AMP wrappers)
+- Enable Debouncing (skip known tracking redirect hops)
+- Strip Tracking URL Parameters
+- Reduce Language Fingerprinting
 - Disable WebRTC IP Leak
 - Disable QUIC Protocol
 - Block Third Party Cookies
 - Force Google SafeSearch
-- Disable / Force Incognito Mode
+- Disable / Force Incognito Mode (mutually exclusive)
 
 ### Brave Features
 - Disable Brave Rewards
@@ -127,15 +132,14 @@ Requires Administrator privileges.
 - Disable Speedreader
 - Disable Tor
 - Disable Sync
+- Disable IPFS
 
 ### Performance & Bloat
 - Disable Background Mode
-- Disable Media Recommendations
 - Disable Shopping List
 - Always Open PDF Externally
 - Disable Translate
 - Disable Spellcheck
-- Disable Promotions
 - Disable Search Suggestions
 - Disable Printing
 - Disable Default Browser Prompt

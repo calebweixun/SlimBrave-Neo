@@ -96,6 +96,20 @@ function Remove-ListPolicy {
     }
 }
 
+function Test-FeatureValueMatches {
+    param($feature, $expected)
+    # List-typed features use a fixed canonical value (the Shields URL
+    # pattern list). In dict-format imports we treat the key's presence as
+    # "apply our list", since encoding alternative list values in a
+    # round-trippable way is out of scope.
+    if ($feature.Type -eq "List") { return $true }
+    if ($feature.Type -eq "DWord") {
+        try { return ([int]$feature.Value -eq [int]$expected) }
+        catch { return $false }
+    }
+    return ($feature.Value.ToString() -eq $expected.ToString())
+}
+
 function Test-ListPolicyMatches {
     param (
         [string]   $RegistryPath,
@@ -123,7 +137,7 @@ function Test-ListPolicyMatches {
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SlimBrave Neo"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(755, 825)
+$form.Size = New-Object System.Drawing.Size(755, 900)
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $false
@@ -137,7 +151,7 @@ $allFeatures = @()
 
 $leftPanel = New-Object System.Windows.Forms.Panel
 $leftPanel.Location = New-Object System.Drawing.Point(20, 20)
-$leftPanel.Size = New-Object System.Drawing.Size(340, 575)
+$leftPanel.Size = New-Object System.Drawing.Size(340, 650)
 $leftPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $leftPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $form.Controls.Add($leftPanel)
@@ -154,7 +168,6 @@ $telemetryFeatures = @(
     @{ Name = "Disable Metrics Reporting"; Key = "MetricsReportingEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Safe Browsing Reporting"; Key = "SafeBrowsingExtendedReportingEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable URL Data Collection"; Key = "UrlKeyedAnonymizedDataCollectionEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Feedback Surveys"; Key = "FeedbackSurveysEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable P3A Analytics"; Key = "BraveP3AEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Stats Ping"; Key = "BraveStatsPingEnabled"; Value = 0; Type = "DWord" }
 )
@@ -191,12 +204,16 @@ $privacyFeatures = @(
     @{ Name = "Disable Browser Sign-in"; Key = "BrowserSignin"; Value = 0; Type = "DWord" },
     @{ Name = "Enable Do Not Track"; Key = "EnableDoNotTrack"; Value = 1; Type = "DWord" },
     @{ Name = "Enable Global Privacy Control"; Key = "BraveGlobalPrivacyControlEnabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Enable De-AMP"; Key = "BraveDeAmpEnabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Enable Debouncing"; Key = "BraveDebouncingEnabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Strip Tracking URL Parameters"; Key = "BraveTrackingQueryParametersFilteringEnabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Reduce Language Fingerprinting"; Key = "BraveReduceLanguageEnabled"; Value = 1; Type = "DWord" },
     @{ Name = "Disable WebRTC IP Leak"; Key = "WebRtcIPHandling"; Value = "disable_non_proxied_udp"; Type = "String" },
     @{ Name = "Disable QUIC Protocol"; Key = "QuicAllowed"; Value = 0; Type = "DWord" },
     @{ Name = "Block Third Party Cookies"; Key = "BlockThirdPartyCookies"; Value = 1; Type = "DWord" },
     @{ Name = "Force Google SafeSearch"; Key = "ForceGoogleSafeSearch"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 1; Type = "DWord" },
-    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord" }
+    @{ Name = "Disable Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 1; Type = "DWord"; Group = "incognito" },
+    @{ Name = "Force Incognito Mode"; Key = "IncognitoModeAvailability"; Value = 2; Type = "DWord"; Group = "incognito" }
 )
 
 foreach ($feature in $privacyFeatures) {
@@ -217,7 +234,7 @@ foreach ($feature in $privacyFeatures) {
 
 $rightPanel = New-Object System.Windows.Forms.Panel
 $rightPanel.Location = New-Object System.Drawing.Point(380, 20)
-$rightPanel.Size = New-Object System.Drawing.Size(340, 665)
+$rightPanel.Size = New-Object System.Drawing.Size(340, 650)
 $rightPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
 $rightPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $form.Controls.Add($rightPanel)
@@ -245,7 +262,8 @@ $braveFeatures = @(
     @{ Name = "Disable Web Discovery"; Key = "BraveWebDiscoveryEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Speedreader"; Key = "BraveSpeedreaderEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Tor"; Key = "TorDisabled"; Value = 1; Type = "DWord" },
-    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord" }
+    @{ Name = "Disable Sync"; Key = "SyncDisabled"; Value = 1; Type = "DWord" },
+    @{ Name = "Disable IPFS"; Key = "IPFSEnabled"; Value = 0; Type = "DWord" }
 )
 
 foreach ($feature in $braveFeatures) {
@@ -273,12 +291,10 @@ $y += 25
 
 $perfFeatures = @(
     @{ Name = "Disable Background Mode"; Key = "BackgroundModeEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Media Recommendations"; Key = "MediaRecommendationsEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Shopping List"; Key = "ShoppingListEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Always Open PDF Externally"; Key = "AlwaysOpenPdfExternally"; Value = 1; Type = "DWord" },
     @{ Name = "Disable Translate"; Key = "TranslateEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Spellcheck"; Key = "SpellcheckEnabled"; Value = 0; Type = "DWord" },
-    @{ Name = "Disable Promotions"; Key = "PromotionsEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Search Suggestions"; Key = "SearchSuggestEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Printing"; Key = "PrintingEnabled"; Value = 0; Type = "DWord" },
     @{ Name = "Disable Default Browser Prompt"; Key = "DefaultBrowserSettingEnabled"; Value = 0; Type = "DWord" },
@@ -299,17 +315,50 @@ foreach ($feature in $perfFeatures) {
 }
 
 # ---------------------------------------------------------------------------
+# Mutual-exclusion groups
+#
+# Features tagged with a `Group` share a single policy key that can only
+# take one value at a time. The handler below mirrors the Python TUI's
+# toggle_feature_row: checking one group member unchecks the others,
+# preventing the silent force-incognito bug that happened when a preset
+# enabled both IncognitoModeAvailability rows and the later one won.
+# ---------------------------------------------------------------------------
+
+$script:groupSuppress = $false
+foreach ($cb in $allFeatures) {
+    if ($null -ne $cb.Tag.Group) {
+        $cb.Add_CheckedChanged({
+            if ($script:groupSuppress) { return }
+            $self = $this
+            if (-not $self.Checked) { return }
+            $group = $self.Tag.Group
+            $script:groupSuppress = $true
+            try {
+                foreach ($other in $allFeatures) {
+                    if ($other -eq $self) { continue }
+                    if ($other.Tag.Group -eq $group -and $other.Checked) {
+                        $other.Checked = $false
+                    }
+                }
+            } finally {
+                $script:groupSuppress = $false
+            }
+        })
+    }
+}
+
+# ---------------------------------------------------------------------------
 # DNS controls
 # ---------------------------------------------------------------------------
 
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS Mode:"
-$dnsLabel.Location = New-Object System.Drawing.Point(35, 660)
+$dnsLabel.Location = New-Object System.Drawing.Point(35, 735)
 $dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Location = New-Object System.Drawing.Point(180, 655)
+$dnsDropdown.Location = New-Object System.Drawing.Point(180, 730)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.Items.AddRange(@("off", "automatic", "secure", "custom"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -319,12 +368,12 @@ $form.Controls.Add($dnsDropdown)
 
 $dnsTemplateLabel = New-Object System.Windows.Forms.Label
 $dnsTemplateLabel.Text = "Custom DoH template URL:"
-$dnsTemplateLabel.Location = New-Object System.Drawing.Point(35, 690)
+$dnsTemplateLabel.Location = New-Object System.Drawing.Point(35, 765)
 $dnsTemplateLabel.Size = New-Object System.Drawing.Size(170, 20)
 $form.Controls.Add($dnsTemplateLabel)
 
 $dnsTemplateBox = New-Object System.Windows.Forms.TextBox
-$dnsTemplateBox.Location = New-Object System.Drawing.Point(210, 690)
+$dnsTemplateBox.Location = New-Object System.Drawing.Point(210, 765)
 $dnsTemplateBox.Size = New-Object System.Drawing.Size(510, 20)
 $dnsTemplateBox.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsTemplateBox.ForeColor = [System.Drawing.Color]::White
@@ -341,7 +390,7 @@ $dnsDropdown.Add_SelectedIndexChanged({
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(50, 735)
+$exportButton.Location = New-Object System.Drawing.Point(50, 810)
 $exportButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -352,7 +401,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(210, 735)
+$importButton.Location = New-Object System.Drawing.Point(210, 810)
 $importButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -363,7 +412,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(410, 735)
+$saveButton.Location = New-Object System.Drawing.Point(410, 810)
 $saveButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -374,7 +423,7 @@ $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(570, 735)
+$resetButton.Location = New-Object System.Drawing.Point(570, 810)
 $resetButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($resetButton)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -388,9 +437,24 @@ $resetButton.ForeColor = [System.Drawing.Color]::LightCoral
 # ---------------------------------------------------------------------------
 
 $saveButton.Add_Click({
+    # Validate DNS settings up-front. Writing features first and then
+    # bailing out on a bad DNS config would leave the policy store in a
+    # half-applied state, which is what the original "custom with no
+    # template" bug looked like in practice.
+    if ($dnsDropdown.SelectedItem -eq "custom" -and
+        [string]::IsNullOrWhiteSpace($dnsTemplateBox.Text)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "Custom DoH requires a template URL (e.g. https://cloudflare-dns.com/dns-query).",
+            "Missing DoH Template",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Warning
+        )
+        return
+    }
+
     # Build a hashtable of selected features keyed by policy key name.
-    # For keys shared by multiple checkboxes (e.g. IncognitoModeAvailability),
-    # the last checked one wins.
+    # Group exclusivity (above) ensures at most one entry per key, so this
+    # is just a key lookup.
     $selectedFeatures = @{}
     foreach ($checkbox in $allFeatures) {
         if ($checkbox.Checked) {
@@ -524,20 +588,24 @@ $exportButton.Add_Click({
     $saveFileDialog.FileName = "SlimBraveNeoSettings.json"
 
     if ($saveFileDialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-        $settingsToExport = @{
-            Features = @()
-            DnsMode = $dnsDropdown.SelectedItem
-            DnsTemplates = $dnsTemplateBox.Text
-        }
-
+        # New key-value map format so multi-value policies (e.g.
+        # IncognitoModeAvailability: 1 vs 2) survive a round-trip.
+        $featureMap = [ordered]@{}
         foreach ($checkbox in $allFeatures) {
             if ($checkbox.Checked) {
-                $settingsToExport.Features += $checkbox.Tag.Key
+                $featureMap[$checkbox.Tag.Key] = $checkbox.Tag.Value
             }
         }
 
+        $settingsToExport = [ordered]@{
+            Features     = $featureMap
+            DnsMode      = $dnsDropdown.SelectedItem
+            DnsTemplates = $dnsTemplateBox.Text
+        }
+
         try {
-            $settingsToExport | ConvertTo-Json | Out-File -FilePath $saveFileDialog.FileName -Force
+            # -Depth 5 covers Features -> key -> list values (Shields).
+            $settingsToExport | ConvertTo-Json -Depth 5 | Out-File -FilePath $saveFileDialog.FileName -Force
             [System.Windows.Forms.MessageBox]::Show(
                 "Settings exported successfully to:`n$($saveFileDialog.FileName)",
                 "Export Successful",
@@ -574,12 +642,31 @@ $importButton.Add_Click({
                 $checkbox.Checked = $false
             }
 
-            # Check matching features
-            foreach ($featureKey in $importedSettings.Features) {
-                foreach ($checkbox in $allFeatures) {
-                    if ($checkbox.Tag.Key -eq $featureKey) {
-                        $checkbox.Checked = $true
-                        break
+            $features = $importedSettings.Features
+            if ($features -is [array]) {
+                # Legacy pre-2026 array format. Only the first row per key
+                # wins to preserve intent for multi-value keys (avoids
+                # silently force-incognitoing users whose old export
+                # listed IncognitoModeAvailability).
+                $handled = @{}
+                foreach ($featureKey in $features) {
+                    if ($handled.ContainsKey($featureKey)) { continue }
+                    foreach ($checkbox in $allFeatures) {
+                        if ($checkbox.Tag.Key -eq $featureKey) {
+                            $checkbox.Checked = $true
+                            $handled[$featureKey] = $true
+                            break
+                        }
+                    }
+                }
+            } elseif ($null -ne $features) {
+                # New dict format — PSCustomObject with key-value pairs.
+                foreach ($prop in $features.PSObject.Properties) {
+                    foreach ($checkbox in $allFeatures) {
+                        if ($checkbox.Tag.Key -eq $prop.Name -and
+                            (Test-FeatureValueMatches $checkbox.Tag $prop.Value)) {
+                            $checkbox.Checked = $true
+                        }
                     }
                 }
             }
