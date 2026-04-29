@@ -13,9 +13,7 @@
 [![macOS](https://img.shields.io/badge/macOS-Supported-000000?logo=apple&logoColor=white)]()
 [![Windows](https://img.shields.io/badge/Windows-Supported-0078D6?logo=windows&logoColor=white)]()
 
-SlimBrave Neo uses Chromium enterprise managed policies to disable telemetry,
-bloat, and unwanted features from Brave Browser. No browser extensions,
-no hacks, just clean policy enforcement that Brave respects natively.
+SlimBrave Neo uses Chromium enterprise managed policies to disable telemetry, bloat, and unwanted features in Brave Browser. No browser extensions, no hacks, just clean policy enforcement that Brave respects natively.
 
 </div>
 
@@ -23,9 +21,15 @@ no hacks, just clean policy enforcement that Brave respects natively.
 > **The only official source of SlimBrave Neo is this repository:**
 > [`github.com/ChaoticSi1ence/SlimBrave-Neo`](https://github.com/ChaoticSi1ence/SlimBrave-Neo)
 >
-> This project ships **source code only** — Python and PowerShell scripts you can read before running.
+> This project ships **source code only**. Python and PowerShell scripts you can read before running.
 > **There are no official `.exe`, `.msi`, `.dmg`, `.pkg`, installers, or compiled binaries.**
 > If you find a download claiming to be SlimBrave-Neo elsewhere, it is not from this project. See [`SECURITY.md`](SECURITY.md).
+
+> [!NOTE]
+> **Linux users: consider [Brave Origin](https://brave.com/) first.**
+> Brave Origin is a free, official Brave variant that ships with telemetry and bloat already removed. If you just want a clean Brave without configuration, that's the simpler path.
+>
+> The Linux version of SlimBrave Neo is still fully supported, and is the right tool if you want fine-grained control over individual policies, custom presets, or your own DoH templates beyond what Origin provides out of the box.
 
 <div align="center">
 
@@ -39,7 +43,9 @@ no hacks, just clean policy enforcement that Brave respects natively.
 
 ---
 
-## Quick Start - Linux
+## Quick Start
+
+### Linux
 
 ```bash
 git clone https://github.com/ChaoticSi1ence/SlimBrave-Neo.git
@@ -49,7 +55,7 @@ sudo python3 slimbrave-linux.py
 
 That's it. No `pip install`, no `jq`, no external dependencies. Just Python 3 and root.
 
-### CLI Mode (non-interactive)
+**CLI mode (non-interactive):**
 
 ```bash
 sudo python3 slimbrave-linux.py --import "./Presets/Maximum Privacy Preset.json"
@@ -59,9 +65,7 @@ sudo python3 slimbrave-linux.py --reset
 
 After applying, restart Brave and verify at `brave://policy`.
 
----
-
-## Quick Start - macOS
+### macOS
 
 ```bash
 git clone https://github.com/ChaoticSi1ence/SlimBrave-Neo.git
@@ -71,7 +75,7 @@ sudo python3 slimbrave-mac.py
 
 Policies are written to `/Library/Managed Preferences/com.brave.Browser.plist`. Requires root.
 
-### CLI Mode (non-interactive)
+**CLI mode (non-interactive):**
 
 ```bash
 sudo python3 slimbrave-mac.py --import "./Presets/Maximum Privacy Preset.json"
@@ -81,9 +85,7 @@ sudo python3 slimbrave-mac.py --reset
 
 After applying, restart Brave and verify at `brave://policy`.
 
----
-
-## Quick Start - Windows
+### Windows
 
 ```powershell
 iwr "https://raw.githubusercontent.com/ChaoticSi1ence/SlimBrave-Neo/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
@@ -164,8 +166,7 @@ Requires Administrator privileges.
 | `--doh-templates URL` | Set custom DNS-over-HTTPS template URL |
 | `-h`, `--help` | Show help |
 
-Import/export uses the same JSON format as the Windows PowerShell version.
-Configs are cross-platform compatible.
+Import/export uses the same JSON format as the Windows PowerShell version. Configs are cross-platform compatible.
 
 ---
 
@@ -173,40 +174,40 @@ Configs are cross-platform compatible.
 <summary><strong>Presets</strong></summary>
 
 ### Maximum Privacy Preset
-- Telemetry: Blocks all reporting (metrics, safe browsing, URL collection, feedback).
-- Privacy: Disables autofill, password manager, sign-in, WebRTC leaks, QUIC, and forces Do Not Track.
-- Brave Features: Kills Rewards, Wallet, VPN, AI Chat, Tor, and Sync.
-- Performance: Disables background processes, recommendations, and bloat.
-- DNS: Uses plain DNS (no HTTPS) to prevent potential logging by DoH providers.
-- Best for: Paranoid users, journalists, activists, or anyone who wants Brave as private as possible.
+- **Telemetry:** Blocks all reporting (metrics, safe browsing, URL collection, feedback).
+- **Privacy:** Disables autofill, password manager, sign-in, WebRTC leaks, QUIC, and forces Do Not Track.
+- **Brave Features:** Kills Rewards, Wallet, VPN, AI Chat, Tor, and Sync.
+- **Performance:** Disables background processes, recommendations, and bloat.
+- **DNS:** Uses plain DNS (no HTTPS) to prevent potential logging by DoH providers.
+- **Best for:** Paranoid users, journalists, activists, or anyone who wants Brave as private as possible.
 
 ### Balanced Privacy Preset
-- Telemetry: Blocks all tracking but keeps basic safe browsing.
-- Privacy: Blocks third-party cookies, enables Do Not Track, but allows password manager and autofill for addresses.
-- Brave Features: Disables Rewards, Wallet, VPN, and AI features.
-- Performance: Turns off background services and ads.
-- DNS: Uses automatic DoH (lets Brave choose the fastest secure DNS).
-- Best for: Most users who want privacy but still need convenience features.
+- **Telemetry:** Blocks all tracking but keeps basic safe browsing.
+- **Privacy:** Blocks third-party cookies, enables Do Not Track, but allows password manager and autofill for addresses.
+- **Brave Features:** Disables Rewards, Wallet, VPN, and AI features.
+- **Performance:** Turns off background services and ads.
+- **DNS:** Uses automatic DoH (lets Brave choose the fastest secure DNS).
+- **Best for:** Most users who want privacy but still need convenience features.
 
 ### Performance Focused Preset
-- Telemetry: Only blocks metrics and feedback surveys (keeps some safe browsing).
-- Brave Features: Disables Rewards, Wallet, VPN, and AI to declutter the browser.
-- Performance: Kills background processes, shopping features, and promotions.
-- DNS: Automatic DoH for a balance of speed and security.
-- Best for: Users who want a faster, cleaner Brave without extreme privacy tweaks.
+- **Telemetry:** Only blocks metrics and feedback surveys (keeps some safe browsing).
+- **Brave Features:** Disables Rewards, Wallet, VPN, and AI to declutter the browser.
+- **Performance:** Kills background processes, shopping features, and promotions.
+- **DNS:** Automatic DoH for a balance of speed and security.
+- **Best for:** Users who want a faster, cleaner Brave without extreme privacy tweaks.
 
 ### Developer Preset
-- Telemetry: Blocks all reporting.
-- Brave Features: Disables Rewards, Wallet, and VPN but keeps developer tools.
-- Performance: Turns off background services and ads.
-- DNS: Automatic DoH (default secure DNS).
-- Best for: Developers who need dev tools but still want telemetry and ads disabled.
+- **Telemetry:** Blocks all reporting.
+- **Brave Features:** Disables Rewards, Wallet, and VPN but keeps developer tools.
+- **Performance:** Turns off background services and ads.
+- **DNS:** Automatic DoH (default secure DNS).
+- **Best for:** Developers who need dev tools but still want telemetry and ads disabled.
 
 ### Strict Parental Controls Preset
-- Privacy: Blocks incognito mode, forces Google SafeSearch, and disables sign-in.
-- Brave Features: Disables Rewards, Wallet, VPN, Tor, and dev tools.
-- DNS: Uses custom DoH (can be set to a family-friendly DNS like Cloudflare for Families).
-- Best for: Parents, schools, or workplaces that need restricted browsing.
+- **Privacy:** Blocks incognito mode, forces Google SafeSearch, and disables sign-in.
+- **Brave Features:** Disables Rewards, Wallet, VPN, Tor, and dev tools.
+- **DNS:** Uses custom DoH (can be set to a family-friendly DNS like Cloudflare for Families).
+- **Best for:** Parents, schools, or workplaces that need restricted browsing.
 
 </details>
 
@@ -214,13 +215,15 @@ Configs are cross-platform compatible.
 
 ## How It Works
 
-SlimBrave Neo writes Chromium [managed enterprise policies](https://chromeenterprise.google/policies/)
-to platform-specific locations. Brave reads these on startup and enforces the policies. No browser modifications needed.
+SlimBrave Neo writes Chromium [managed enterprise policies](https://chromeenterprise.google/policies/) to platform-specific locations. Brave reads these on startup and enforces the policies. No browser modifications needed.
 
-- **Linux:** `/etc/brave/policies/managed/slimbrave.json`
-- **macOS:** `/Library/Managed Preferences/com.brave.Browser.plist`
-- **Windows:** Registry keys via PowerShell
+| Platform | Policy Location |
+|----------|----------------|
+| Linux | `/etc/brave/policies/managed/slimbrave.json` |
+| macOS | `/Library/Managed Preferences/com.brave.Browser.plist` |
+| Windows | Registry keys via PowerShell |
 
+**Additional behavior:**
 - Auto-detects Brave installations: Arch (`brave-bin`), deb/rpm, Flatpak, Snap, macOS App, and PATH fallback
 - Reads existing policies on startup and pre-checks matching features
 - Full overwrite on Apply, so unchecked features are cleanly removed
@@ -261,7 +264,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 
 ---
 
-### Roadmap
+## Roadmap
+
 - [x] Add preset configurations (Privacy, Performance, etc.)
 - [x] Import/export settings (cross-platform compatible)
 - [x] Add Linux support with full interactive TUI
@@ -282,6 +286,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 **Like this project? Give it a star!**
 
 Made with Python and PowerShell.
+
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 </div>
