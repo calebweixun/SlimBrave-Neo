@@ -137,7 +137,7 @@ function Test-ListPolicyMatches {
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "SlimBrave Neo (繁體中文版)"
 $form.ForeColor = [System.Drawing.Color]::White
-$form.Size = New-Object System.Drawing.Size(755, 900)
+$form.Size = New-Object System.Drawing.Size(755, 960)
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $form.MaximizeBox = $false
@@ -348,17 +348,278 @@ foreach ($cb in $allFeatures) {
 }
 
 # ---------------------------------------------------------------------------
+# Preset quick-select - 快速精簡模式
+# ---------------------------------------------------------------------------
+
+# Each preset is a hashtable mapping policy keys to $true (check) or $null
+# (leave unchecked).  Keys NOT listed stay unchecked.
+$presets = [ordered]@{
+    "-- 請選擇精簡模式 --" = $null
+    "1. 輕量精簡 - 日常使用" = @{
+        Desc = "僅關閉遙測與 Brave 多餘功能，保留密碼管理員、自動填入、翻譯等日常功能。適合一般使用者。"
+        Keys = @(
+            "MetricsReportingEnabled",
+            "SafeBrowsingExtendedReportingEnabled",
+            "UrlKeyedAnonymizedDataCollectionEnabled",
+            "BraveP3AEnabled",
+            "BraveStatsPingEnabled",
+            "BraveRewardsDisabled",
+            "BraveWalletDisabled",
+            "BraveVPNDisabled",
+            "BraveAIChatEnabled",
+            "BraveNewsDisabled",
+            "BraveTalkDisabled",
+            "BraveWebDiscoveryEnabled",
+            "IPFSEnabled",
+            "ShoppingListEnabled",
+            "DefaultBrowserSettingEnabled",
+            "BraveWaybackMachineEnabled"
+        )
+        Dns = "off"
+    }
+    "2. 均衡隱私 - 推薦" = @{
+        Desc = "關閉遙測 + 多數 Brave 膨脹功能，啟用 Do Not Track、GPC、De-AMP、防跳轉、封鎖第三方 Cookie。保留密碼管理員與翻譯。"
+        Keys = @(
+            "MetricsReportingEnabled",
+            "SafeBrowsingExtendedReportingEnabled",
+            "UrlKeyedAnonymizedDataCollectionEnabled",
+            "BraveP3AEnabled",
+            "BraveStatsPingEnabled",
+            "AutofillCreditCardEnabled",
+            "BrowserSignin",
+            "EnableDoNotTrack",
+            "BraveGlobalPrivacyControlEnabled",
+            "BraveDeAmpEnabled",
+            "BraveDebouncingEnabled",
+            "BraveTrackingQueryParametersFilteringEnabled",
+            "BraveReduceLanguageEnabled",
+            "WebRtcIPHandling",
+            "QuicAllowed",
+            "BlockThirdPartyCookies",
+            "ForceGoogleSafeSearch",
+            "BraveRewardsDisabled",
+            "BraveWalletDisabled",
+            "BraveVPNDisabled",
+            "BraveAIChatEnabled",
+            "BraveNewsDisabled",
+            "BraveTalkDisabled",
+            "BraveWebDiscoveryEnabled",
+            "TorDisabled",
+            "SyncDisabled",
+            "IPFSEnabled",
+            "BackgroundModeEnabled",
+            "ShoppingListEnabled",
+            "DefaultBrowserSettingEnabled"
+        )
+        Dns = "automatic"
+    }
+    "3. 高度防護 - 進階使用者" = @{
+        Desc = "在均衡隱私基礎上，額外停用安全瀏覽、自動填入、密碼管理員、翻譯、拼字檢查。適合注重隱私的進階使用者。"
+        Keys = @(
+            "MetricsReportingEnabled",
+            "SafeBrowsingExtendedReportingEnabled",
+            "UrlKeyedAnonymizedDataCollectionEnabled",
+            "BraveP3AEnabled",
+            "BraveStatsPingEnabled",
+            "SafeBrowsingProtectionLevel",
+            "AutofillAddressEnabled",
+            "AutofillCreditCardEnabled",
+            "PasswordManagerEnabled",
+            "BrowserSignin",
+            "EnableDoNotTrack",
+            "BraveGlobalPrivacyControlEnabled",
+            "BraveDeAmpEnabled",
+            "BraveDebouncingEnabled",
+            "BraveTrackingQueryParametersFilteringEnabled",
+            "BraveReduceLanguageEnabled",
+            "WebRtcIPHandling",
+            "QuicAllowed",
+            "BlockThirdPartyCookies",
+            "ForceGoogleSafeSearch",
+            "BraveRewardsDisabled",
+            "BraveWalletDisabled",
+            "BraveVPNDisabled",
+            "BraveAIChatEnabled",
+            "BraveNewsDisabled",
+            "BraveTalkDisabled",
+            "BravePlaylistEnabled",
+            "BraveWebDiscoveryEnabled",
+            "BraveSpeedreaderEnabled",
+            "TorDisabled",
+            "SyncDisabled",
+            "IPFSEnabled",
+            "BackgroundModeEnabled",
+            "ShoppingListEnabled",
+            "TranslateEnabled",
+            "SpellcheckEnabled",
+            "DefaultBrowserSettingEnabled",
+            "BraveWaybackMachineEnabled"
+        )
+        Dns = "automatic"
+    }
+    "4. 極致精簡 - 最大精簡" = @{
+        Desc = "關閉所有非核心功能，包括列印、開發人員工具、搜尋建議。僅保留最基本的瀏覽功能，適合公共電腦或 Kiosk 模式。"
+        Keys = @(
+            "MetricsReportingEnabled",
+            "SafeBrowsingExtendedReportingEnabled",
+            "UrlKeyedAnonymizedDataCollectionEnabled",
+            "BraveP3AEnabled",
+            "BraveStatsPingEnabled",
+            "SafeBrowsingProtectionLevel",
+            "AutofillAddressEnabled",
+            "AutofillCreditCardEnabled",
+            "PasswordManagerEnabled",
+            "BrowserSignin",
+            "EnableDoNotTrack",
+            "BraveGlobalPrivacyControlEnabled",
+            "BraveDeAmpEnabled",
+            "BraveDebouncingEnabled",
+            "BraveTrackingQueryParametersFilteringEnabled",
+            "BraveReduceLanguageEnabled",
+            "WebRtcIPHandling",
+            "QuicAllowed",
+            "BlockThirdPartyCookies",
+            "ForceGoogleSafeSearch",
+            "BraveRewardsDisabled",
+            "BraveWalletDisabled",
+            "BraveVPNDisabled",
+            "BraveAIChatEnabled",
+            "BraveShieldsDisabledForUrls",
+            "BraveNewsDisabled",
+            "BraveTalkDisabled",
+            "BravePlaylistEnabled",
+            "BraveWebDiscoveryEnabled",
+            "BraveSpeedreaderEnabled",
+            "TorDisabled",
+            "SyncDisabled",
+            "IPFSEnabled",
+            "BackgroundModeEnabled",
+            "ShoppingListEnabled",
+            "AlwaysOpenPdfExternally",
+            "TranslateEnabled",
+            "SpellcheckEnabled",
+            "SearchSuggestEnabled",
+            "PrintingEnabled",
+            "DefaultBrowserSettingEnabled",
+            "DeveloperToolsAvailability",
+            "BraveWaybackMachineEnabled"
+        )
+        Dns = "off"
+    }
+}
+
+$presetPanel = New-Object System.Windows.Forms.Panel
+$presetPanel.Location = New-Object System.Drawing.Point(20, 675)
+$presetPanel.Size = New-Object System.Drawing.Size(700, 60)
+$presetPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 35, 35, 35)
+$presetPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$form.Controls.Add($presetPanel)
+
+$presetLabel = New-Object System.Windows.Forms.Label
+$presetLabel.Text = "快速精簡模式："
+$presetLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Bold)
+$presetLabel.Location = New-Object System.Drawing.Point(10, 5)
+$presetLabel.Size = New-Object System.Drawing.Size(140, 22)
+$presetLabel.ForeColor = [System.Drawing.Color]::FromArgb(255, 255, 200, 80)
+$presetPanel.Controls.Add($presetLabel)
+
+$presetDropdown = New-Object System.Windows.Forms.ComboBox
+$presetDropdown.Location = New-Object System.Drawing.Point(155, 4)
+$presetDropdown.Size = New-Object System.Drawing.Size(230, 22)
+$presetDropdown.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+$presetDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$presetDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$presetDropdown.ForeColor = [System.Drawing.Color]::White
+foreach ($name in $presets.Keys) {
+    $presetDropdown.Items.Add($name) | Out-Null
+}
+$presetDropdown.SelectedIndex = 0
+$presetPanel.Controls.Add($presetDropdown)
+
+$presetDescLabel = New-Object System.Windows.Forms.Label
+$presetDescLabel.Text = ""
+$presetDescLabel.Location = New-Object System.Drawing.Point(10, 30)
+$presetDescLabel.Size = New-Object System.Drawing.Size(680, 26)
+$presetDescLabel.ForeColor = [System.Drawing.Color]::FromArgb(255, 180, 180, 180)
+$presetDescLabel.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 8.5)
+$presetPanel.Controls.Add($presetDescLabel)
+
+$presetApplyButton = New-Object System.Windows.Forms.Button
+$presetApplyButton.Text = "套用模式"
+$presetApplyButton.Location = New-Object System.Drawing.Point(400, 2)
+$presetApplyButton.Size = New-Object System.Drawing.Size(90, 25)
+$presetApplyButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$presetApplyButton.FlatAppearance.BorderSize = 1
+$presetApplyButton.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255, 200, 160, 60)
+$presetApplyButton.BackColor = [System.Drawing.Color]::FromArgb(255, 60, 50, 30)
+$presetApplyButton.ForeColor = [System.Drawing.Color]::FromArgb(255, 255, 200, 80)
+$presetApplyButton.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 9, [System.Drawing.FontStyle]::Bold)
+$presetPanel.Controls.Add($presetApplyButton)
+
+$presetDropdown.Add_SelectedIndexChanged({
+    $selectedName = $presetDropdown.SelectedItem.ToString()
+    $preset = $presets[$selectedName]
+    if ($null -ne $preset) {
+        $presetDescLabel.Text = $preset.Desc
+    } else {
+        $presetDescLabel.Text = "選擇一個精簡模式，然後點選「套用模式」快速勾選建議設定。"
+    }
+})
+
+# Fire once to show initial description
+$presetDescLabel.Text = "選擇一個精簡模式，然後點選「套用模式」快速勾選建議設定。"
+
+$presetApplyButton.Add_Click({
+    $selectedName = $presetDropdown.SelectedItem.ToString()
+    $preset = $presets[$selectedName]
+    if ($null -eq $preset) {
+        [System.Windows.Forms.MessageBox]::Show(
+            "請先從下拉選單選擇一個精簡模式。",
+            "提示",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        )
+        return
+    }
+
+    # Uncheck all first
+    foreach ($checkbox in $allFeatures) {
+        $checkbox.Checked = $false
+    }
+
+    # Check features listed in the preset
+    $presetKeys = $preset.Keys
+    foreach ($checkbox in $allFeatures) {
+        if ($presetKeys -contains $checkbox.Tag.Key) {
+            $checkbox.Checked = $true
+        }
+    }
+
+    # Set DNS mode
+    if ($preset.Dns) {
+        $dnsDropdown.SelectedItem = $preset.Dns
+    }
+
+    [System.Windows.Forms.MessageBox]::Show(
+        "已套用「$selectedName」精簡模式的建議勾選。`n`n請檢視後點選「套用設定」寫入系統。",
+        "精簡模式已載入",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    )
+})
+
+# ---------------------------------------------------------------------------
 # DNS controls
 # ---------------------------------------------------------------------------
 
 $dnsLabel = New-Object System.Windows.Forms.Label
 $dnsLabel.Text = "DNS Over HTTPS (DoH) 模式:"
-$dnsLabel.Location = New-Object System.Drawing.Point(35, 735)
+$dnsLabel.Location = New-Object System.Drawing.Point(35, 795)
 $dnsLabel.Size = New-Object System.Drawing.Size(140, 20)
 $form.Controls.Add($dnsLabel)
 
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
-$dnsDropdown.Location = New-Object System.Drawing.Point(180, 730)
+$dnsDropdown.Location = New-Object System.Drawing.Point(180, 790)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
 $dnsDropdown.Items.AddRange(@("off", "automatic", "secure", "custom"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -368,12 +629,12 @@ $form.Controls.Add($dnsDropdown)
 
 $dnsTemplateLabel = New-Object System.Windows.Forms.Label
 $dnsTemplateLabel.Text = "自訂 DoH 範本 URL:"
-$dnsTemplateLabel.Location = New-Object System.Drawing.Point(35, 765)
+$dnsTemplateLabel.Location = New-Object System.Drawing.Point(35, 825)
 $dnsTemplateLabel.Size = New-Object System.Drawing.Size(170, 20)
 $form.Controls.Add($dnsTemplateLabel)
 
 $dnsTemplateBox = New-Object System.Windows.Forms.TextBox
-$dnsTemplateBox.Location = New-Object System.Drawing.Point(210, 765)
+$dnsTemplateBox.Location = New-Object System.Drawing.Point(210, 825)
 $dnsTemplateBox.Size = New-Object System.Drawing.Size(510, 20)
 $dnsTemplateBox.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsTemplateBox.ForeColor = [System.Drawing.Color]::White
@@ -390,7 +651,7 @@ $dnsDropdown.Add_SelectedIndexChanged({
 
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "匯出設定"
-$exportButton.Location = New-Object System.Drawing.Point(50, 810)
+$exportButton.Location = New-Object System.Drawing.Point(50, 870)
 $exportButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -401,7 +662,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "匯入設定"
-$importButton.Location = New-Object System.Drawing.Point(210, 810)
+$importButton.Location = New-Object System.Drawing.Point(210, 870)
 $importButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -412,7 +673,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "套用設定"
-$saveButton.Location = New-Object System.Drawing.Point(410, 810)
+$saveButton.Location = New-Object System.Drawing.Point(410, 870)
 $saveButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -423,7 +684,7 @@ $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "重設所有設定"
-$resetButton.Location = New-Object System.Drawing.Point(570, 810)
+$resetButton.Location = New-Object System.Drawing.Point(570, 870)
 $resetButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($resetButton)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
