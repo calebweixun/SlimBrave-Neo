@@ -14,6 +14,7 @@ import argparse
 import curses
 import json
 import os
+import plistlib
 import shutil
 import subprocess
 import sys
@@ -21,7 +22,6 @@ import tempfile
 
 IS_MAC = sys.platform == "darwin"
 if IS_MAC:
-    import plistlib
     POLICY_DIR = "/Library/Managed Preferences"
     POLICY_FILE = os.path.join(POLICY_DIR, "com.brave.Browser.plist")
     # Directories a `--policy-file` argument is permitted to target on macOS.
@@ -204,7 +204,8 @@ CATEGORIES = [
             {"name": "停用 Brave 獎勵 (Rewards)", "key": "BraveRewardsDisabled", "value": True},
             {"name": "停用 Brave 錢包 (Wallet)", "key": "BraveWalletDisabled", "value": True},
             {"name": "停用 Brave VPN", "key": "BraveVPNDisabled", "value": True},
-            {"name": "停用 Brave AI 聊天 (Leo)", "key": "BraveAIChatEnabled", "value": False},
+            {"name": "停用 Brave AI 聊天 (Leo)", "key": "BraveAIChatEnabled", "value": False, "group": "leo_chat"},
+            {"name": "啟用 Brave AI 聊天 (Leo)", "key": "BraveAIChatEnabled", "value": True, "group": "leo_chat"},
             {"name": "停用 Brave 護盾 (Shields)", "key": "BraveShieldsDisabledForUrls", "value": ["https://*", "http://*"]},
             {"name": "停用 Brave 新聞 (News)", "key": "BraveNewsDisabled", "value": True},
             {"name": "停用 Brave 視訊通話 (Talk)", "key": "BraveTalkDisabled", "value": True},
@@ -354,6 +355,29 @@ def load_existing_policy():
         return {}
 
 
+def _verify_policy_state(expected_policy):
+    """Verify on-disk policy matches what we intended to write."""
+    actual_policy = load_existing_policy()
+    if not isinstance(actual_policy, dict):
+        return False, "無法讀取政策檔內容。"
+
+    mismatches = []
+    keys = sorted(set(expected_policy.keys()) | set(actual_policy.keys()))
+    for key in keys:
+        expected = expected_policy.get(key, "<missing>")
+        actual = actual_policy.get(key, "<missing>")
+        if expected != actual:
+            mismatches.append(f"{key}: expected={expected!r}, actual={actual!r}")
+
+    if mismatches:
+        preview = "; ".join(mismatches[:4])
+        if len(mismatches) > 4:
+            preview += f" ... (+{len(mismatches) - 4} more)"
+        return False, preview
+
+    return True, ""
+
+
 def apply_policy(rows):
     """Write checked features to the policy JSON file."""
     policy = {}
@@ -389,7 +413,12 @@ def apply_policy(rows):
             _atomic_write(POLICY_FILE, plistlib.dumps(policy), binary=True)
         else:
             _atomic_write(POLICY_FILE, json.dumps(policy, indent=4))
-        return True, "設定已套用。請重新啟動 Brave 以查看變更。"
+
+        ok, verify_msg = _verify_policy_state(policy)
+        if not ok:
+            return False, f"設定已寫入，但驗證失敗：{verify_msg}"
+
+        return True, "設定已套用並驗證。請重新啟動 Brave 以查看變更。"
     except PermissionError:
         return False, "權限不足。請以 root (sudo) 身分執行。"
     except OSError as e:
@@ -1098,6 +1127,20 @@ def cli_reset():
         return 1
 
 
+def cli_verify():
+    """Non-interactive: verify current policy file and key values."""
+    policy = load_existing_policy()
+    if not policy:
+        print(f"No existing policy found at {POLICY_FILE}", file=sys.stderr)
+        return 1
+
+    print(f"Policy file: {POLICY_FILE}")
+    print(f"Policy keys: {len(policy)}")
+    print(f"BraveAIChatEnabled: {policy.get('BraveAIChatEnabled', '<not set>')}")
+    print(f"DnsOverHttpsMode: {policy.get('DnsOverHttpsMode', '<not set>')}")
+    return 0
+
+
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -1125,6 +1168,10 @@ def parse_args():
         "--doh-templates", metavar="URL",
         help="set DnsOverHttpsTemplates (used with custom DNS mode)",
     )
+    parser.add_argument(
+        "--verify", action="store_true",
+        help="verify current policy file and print key values",
+    )
     return parser.parse_args()
 
 # ---------------------------------------------------------------------------
@@ -1146,7 +1193,7 @@ if __name__ == "__main__":
         POLICY_FILE = os.path.realpath(args.policy_file)
         POLICY_DIR = os.path.dirname(POLICY_FILE)
 
-    is_cli = args.import_path or args.export_path or args.reset
+    is_cli = args.import_path or args.export_path or args.reset or args.verify
 
     if os.geteuid() != 0:
         print("SlimBrave Neo must be run as root.")
@@ -1166,6 +1213,8 @@ if __name__ == "__main__":
                             doh_templates=args.doh_templates or "")
         if args.export_path:
             rc = cli_export(args.export_path)
+        if args.verify:
+            rc = cli_verify()
         sys.exit(rc)
 
     # Interactive TUI mode
